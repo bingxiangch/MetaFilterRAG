@@ -220,11 +220,14 @@ async def handle_query(req: QueryRequest, user: User = Depends(get_current_user)
     user_department = user.department
 
     metadata = extract_metadata(query)
+    print('metadata: ', metadata)
     check_section_permission(metadata.get("section", []), user.role)
 
     query_filter = build_qdrant_filter(metadata, user_department)
-    search_result = search_with_fallback(query, query_filter)
+    print('query_filter: ', query_filter)
 
+    search_result = search_with_fallback(query, query_filter)
+    print('search_result: ', search_result)
     answer_system_prompt = build_answer_prompt(search_result, user)
     context = "\n\n".join([hit.document for hit in search_result])
 
