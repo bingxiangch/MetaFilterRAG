@@ -2,6 +2,14 @@
 
 This project is a Proof-of-Concept (PoC) implementation of a secure and efficient Retrieval-Augmented Generation (RAG) system. It combines **Agent-Driven Metadata Filtering** and **Role-Based Access Control (RBAC)** to improve information retrieval and enforce data access policies in sensitive environments, such as healthcare.
 
+
+## 🖼️ Demo Screenshot
+
+Here’s a quick look at the system in action:
+![System Demo1](./images/demo1.jpg)
+![Demo 2](./images/demo2.jpg)
+---
+
 ### Key Features
 - 🧠 Uses GPT-3.5 for data generating, metadata extraction, and query interpreting.
 - 🛡️ Integrates RBAC to limit access to patient records based on user roles.
@@ -33,12 +41,7 @@ The system builds a secure and accurate filter in three steps:
 3. **Search with Metadata Filter**  
    This filter is applied during vector search in Qdrant, so only relevant and authorized documents are retrieved for generating the final answer.
 
-## 🖼️ Demo Screenshot
 
-Here’s a quick look at the system in action:
-![System Demo1](./images/demo1.jpg)
-![Demo 2](./images/demo2.jpg)
----
 
 ## 🚀 Getting Started
 1. Clone the repo:
