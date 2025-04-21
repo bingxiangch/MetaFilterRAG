@@ -1426,5 +1426,277 @@
         "answer": "Mason Smith's recent MRI showed no significant changes. His cholesterol levels were slightly above the target, blood pressure measured at 130/80 mmHg, and oxygen saturation at rest was 98%. The results indicate stable migraine condition."
       }
     ]
-  }
+  },
+    {
+      "filename": "Evelyn Walker_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Evelyn Walker's current medical condition?",
+          "answer": "Evelyn Walker is experiencing chronic migraines, with frequent headaches and moderate fatigue by late afternoon."
+        },
+        {
+          "question": "What medications does Evelyn Walker take for her health conditions?",
+          "answer": "Evelyn Walker uses daily medication for migraines, medication for cholesterol management and cardiovascular protection, and occasionally uses sumatriptan during severe migraine flare-ups."
+        },
+        {
+          "question": "What are some key details about Evelyn Walker's medical history?",
+          "answer": "Evelyn Walker was diagnosed with migraines 10 years ago. She also has osteoarthritis, experienced a minor stroke 5 years ago, and has no known drug allergies. Furthermore, her family history includes hypertension."
+        }
+      ]
+    },
+    {
+      "filename": "Addison Adams_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What symptoms did Addison Adams report at her recent routine check-up?",
+          "answer": "Addison Adams reported chest pain, shortness of breath, and moderate fatigue by late afternoon."
+        },
+        {
+          "question": "How does Addison Adams stay socially active despite her current condition?",
+          "answer": "Addison Adams stays socially active through community volunteering."
+        },
+        {
+          "question": "What is Addison Adams' LDL cholesterol level based on the recent lab results?",
+          "answer": "Addison Adams' LDL cholesterol level was 140 mg/dL, slightly above the target."
+        }
+      ]
+    },
+    {
+      "filename": "Dylan Johnson_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Dylan Johnson's age and occupation?",
+          "answer": "Dylan Johnson is a 45-year-old male software engineer."
+        },
+        {
+          "question": "How does Dylan Johnson manage his chronic migraines?",
+          "answer": "Dylan Johnson uses daily medication for migraine management and occasionally uses Sumatriptan during severe flare-ups."
+        },
+        {
+          "question": "What were the results of Dylan Johnson's recent lab tests?",
+          "answer": "MRI showed no significant changes, blood tests revealed slightly elevated cholesterol levels, blood pressure measured at 135/85 mmHg, and oxygen saturation at rest was 98%."
+        }
+      ]
+    },
+    {
+      "filename": "Sophie Anderson_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Sophie Anderson's current condition?",
+          "answer": "Sophie Anderson reported experiencing chest pain, shortness of breath, and moderate fatigue but remains socially active and mobile."
+        },
+        {
+          "question": "What treatment is Sophie Anderson currently undergoing?",
+          "answer": "Sophie Anderson takes daily medication for angina, high cholesterol, and cardiovascular protection. She also occasionally uses nitroglycerin for chest pain flare-ups and follows a low-sodium diet."
+        },
+        {
+          "question": "What are Sophie Anderson's lab results?",
+          "answer": "Sophie Anderson's troponin level was slightly above the target, LDL cholesterol was elevated, blood pressure measured at 130/80 mmHg, and oxygen saturation at rest was 97%. Results indicate stable angina status."
+        }
+      ]
+    },
+    {
+      "filename": "Isabella Green_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Isabella Green's current condition?",
+          "answer": "Isabella Green reported experiencing high blood pressure, occasional dizziness, and fatigue by late afternoon. Her mobility remains good, and she stays socially active through book club meetings."
+        },
+        {
+          "question": "What medications does Isabella Green take for her health conditions?",
+          "answer": "Isabella Green uses daily medication for hypertension, takes medication for high cholesterol and cardiovascular protection, and occasionally uses nitroglycerin during heart-related flare-ups."
+        },
+        {
+          "question": "What were the key findings from Isabella Green's recent lab results?",
+          "answer": "Isabella Green's cholesterol levels were slightly above the target, LDL was 140 mg/dL, echocardiogram showed mild left ventricular hypertrophy, blood pressure measured at 150/90 mmHg, and oxygen saturation at rest was 98%."
+        }
+      ]
+    },
+    {
+      "filename": "Carter Garcia_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Carter Garcia's current occupation?",
+          "answer": "Carter Garcia is a software engineer."
+        },
+        {
+          "question": "How does Carter Garcia stay socially active?",
+          "answer": "Carter Garcia stays socially active through online gaming with friends."
+        },
+        {
+          "question": "What is Carter Garcia's treatment plan for migraines?",
+          "answer": "Carter Garcia uses daily medication for migraines, takes medication for cholesterol management and cardiovascular protection, and occasionally uses sumatriptan during severe migraine flare-ups."
+        }
+      ]
+    },
+    {
+      "filename": "Megan Jackson_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What symptoms did Megan Jackson report during her recent check-up?",
+          "answer": "Chest pain, palpitations, and fatigue by late afternoon."
+        },
+        {
+          "question": "What is Megan Jackson's current treatment plan?",
+          "answer": "She uses daily medication for angina, takes medication for high cholesterol and aspirin for cardiovascular protection, occasionally uses nitroglycerin, follows a low-sodium diet, and checks her blood pressure regularly."
+        },
+        {
+          "question": "What did Megan Jackson's lab results show?",
+          "answer": "Cholesterol levels slightly above the target, abnormal heart rhythms on EKG, blood pressure of 130/80 mmHg, and stable angina indicated."
+        }
+      ]
+    },
+    {
+      "filename": "Maya Torres_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Maya Torres' current condition?",
+          "answer": "Maya Torres reported occasional chest pain, palpitations, and moderate fatigue by late afternoon. She remains mobile and socially active by participating in dance classes."
+        },
+        {
+          "question": "What treatment does Maya Torres receive for her health conditions?",
+          "answer": "Maya Torres takes daily medication for hypertension, statins for cholesterol management, aspirin for cardiovascular protection, and occasionally uses nitroglycerin for chest pain. She follows a low-sodium diet and checks her blood pressure regularly."
+        },
+        {
+          "question": "What are the key findings from Maya Torres' recent lab results?",
+          "answer": "Maya Torres' LDL cholesterol was slightly above the target range at 130 mg/dL. Troponin levels were normal, blood pressure was measured at 130/80 mmHg, and oxygen saturation at rest was 98%. Results indicate stable cardiovascular health."
+        }
+      ]
+    },
+    {
+      "filename": "Hazel Perez_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Hazel Perez's current medical condition?",
+          "answer": "Hazel Perez has hypertension and experiences occasional dizziness and fatigue."
+        },
+        {
+          "question": "What treatment does Hazel Perez receive for her medical conditions?",
+          "answer": "Hazel Perez takes daily medication for hypertension, high cholesterol, cardiovascular protection, and occasionally uses nitroglycerin."
+        },
+        {
+          "question": "What are the results of Hazel Perez's recent lab tests?",
+          "answer": "Hazel Perez's blood pressure was slightly above the target at 140/90 mmHg, LDL cholesterol level was 130 mg/dL, and oxygen saturation at rest was 97%."
+        }
+      ]
+    },
+    {
+      "filename": "Violet Cooper_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Violet Cooper's current age and occupation?",
+          "answer": "Violet Cooper is a 52-year-old high school teacher."
+        },
+        {
+          "question": "How does Violet Cooper manage her migraines and cholesterol?",
+          "answer": "Violet Cooper uses daily medication for migraines, takes statins for cholesterol control, and occasionally uses sumatriptan during migraine flare-ups."
+        },
+        {
+          "question": "What is Violet Cooper's recent reported symptom and mobility status?",
+          "answer": "Violet Cooper reported frequent headaches with throbbing pain and moderate fatigue but her mobility remains unaffected."
+        }
+      ]
+    },
+    {
+      "filename": "Madeline Hernandez_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Madeline Hernandez's current medical condition?",
+          "answer": "Madeline Hernandez is experiencing chronic migraines, frequent headaches, and moderate fatigue by late afternoon."
+        },
+        {
+          "question": "What treatment is Madeline Hernandez receiving for her migraines?",
+          "answer": "Madeline Hernandez uses daily medication for migraine prevention, takes medication for high cholesterol and cardiovascular protection, and occasionally uses sumatriptan for migraine flare-ups. She follows a low-sodium diet and checks her blood pressure regularly."
+        },
+        {
+          "question": "What are Madeline Hernandez's lab results?",
+          "answer": "Madeline's MRI showed no significant abnormalities. Her cholesterol levels were slightly above the target range. Blood pressure measured at 130/80 mmHg. Oxygen saturation at rest was 98%. Results indicate stable migraine condition."
+        }
+      ]
+    },
+    {
+      "filename": "Mia Thompson_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Mia Thompson's current medical condition?",
+          "answer": "Mia Thompson is experiencing chronic migraines, frequent headaches, and high levels of fatigue by late afternoon."
+        },
+        {
+          "question": "How does Mia Thompson manage her migraines?",
+          "answer": "Mia Thompson uses a daily medication for migraines, occasionally uses Sumatriptan for flare-ups, follows a balanced diet, and checks her blood pressure regularly."
+        },
+        {
+          "question": "What was the result of Mia Thompson's recent blood tests?",
+          "answer": "Mia Thompson's recent blood tests showed slightly elevated cholesterol levels above the target, while her MRI scan showed no abnormalities. Her blood pressure measured at 130/80 mmHg, and her oxygen saturation at rest was 98%."
+        }
+      ]
+    },
+    {
+      "filename": "Zachary Turner_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Zachary Turner's current medical condition?",
+          "answer": "Zachary Turner reported chest pain, shortness of breath, and moderate fatigue during a recent routine check-up."
+        },
+        {
+          "question": "What medications is Zachary Turner taking for his condition?",
+          "answer": "Zachary Turner uses a daily medication for angina, takes statins for cholesterol management, and beta-blockers for cardiovascular protection. He also occasionally uses nitroglycerin during chest pain episodes."
+        },
+        {
+          "question": "What were Zachary Turner's recent lab results?",
+          "answer": "Zachary Turner had slightly elevated troponin levels, LDL cholesterol at 110 mg/dL, blood pressure of 130/80 mmHg, and oxygen saturation at rest of 98%. These results indicate stable angina."
+        }
+      ]
+    },
+    {
+      "filename": "Alex Martin_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Alex Martin's native language?",
+          "answer": "Finnish"
+        },
+        {
+          "question": "What is Alex Martin's occupation?",
+          "answer": "Software engineer"
+        },
+        {
+          "question": "How does Alex Martin stay socially active?",
+          "answer": "Through virtual meetups with friends and family"
+        }
+      ]
+    },
+    {
+      "filename": "Amaya Young_Neurology.txt",
+      "qa_pairs": [
+        {
+          "question": "What is Amaya Young's current medical condition?",
+          "answer": "Amaya Young is experiencing frequent migraines with intense headaches and fatigue but has unaffected mobility."
+        },
+        {
+          "question": "What is Amaya Young's treatment plan for migraines and related conditions?",
+          "answer": "Amaya Young uses daily medication for migraine prevention, manages cholesterol and cardiovascular protection, and occasionally uses sumatriptan during severe migraine attacks."
+        },
+        {
+          "question": "What were the results of Amaya Young's recent MRI and lab tests?",
+          "answer": "Amaya Young's recent MRI showed no significant changes in her brain structure. Blood cholesterol levels were slightly elevated, blood pressure was 130/80 mmHg, and oxygen saturation at rest was 98%. Results indicate stable migraine status."
+        }
+      ]
+    },
+    {
+      "filename": "Alex Brown_Cardiology.txt",
+      "qa_pairs": [
+        {
+          "question": "What symptoms did Alex Brown report during his recent check-up?",
+          "answer": "Alex Brown reported chest pain, shortness of breath, and moderate fatigue."
+        },
+        {
+          "question": "What medications does Alex Brown take for his heart condition?",
+          "answer": "Alex Brown takes daily aspirin, atorvastatin for cholesterol management, metoprolol for cardiovascular protection, and occasionally uses nitroglycerin."
+        },
+        {
+          "question": "What is Alex Brown's family history related to his medical conditions?",
+          "answer": "Alex Brown has a family history of cardiovascular diseases."
+        }
+      ]
+    }
 ]
