@@ -6,8 +6,8 @@ This project is a Proof-of-Concept (PoC) implementation of a secure and efficien
 ## 🖼️ Demo Screenshot
 
 Here’s a quick look at the system in action:
-![System Demo1](./images/demo1.jpg)
-![Demo 2](./images/demo2.jpg)
+![System Demo1](./images/demo1.png)
+![Demo 2](./images/demo2.png)
 ---
 
 ### Key Features

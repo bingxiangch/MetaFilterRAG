@@ -12,6 +12,7 @@ from qdrant_client import QdrantClient, models
 from openai import OpenAI
 import os
 import json
+from dataclasses import is_dataclass, asdict
 
 # Load environment variables
 load_dotenv()
@@ -220,11 +221,23 @@ async def handle_query(req: QueryRequest, user: User = Depends(get_current_user)
     user_department = user.department
 
     metadata = extract_metadata(query)
-    print('metadata: ', metadata)
-    check_section_permission(metadata.get("section", []), user.role)
+    metadata['department'] = user_department
+    # Move "department" to the beginning
+    ordered_metadata = {'department': metadata.pop('department'), **metadata}
+    extracted_filter = format_extracted_filter(ordered_metadata)
+    print("extracted_filter: ", extracted_filter)
+    extracted_filter = format_extracted_filter(ordered_metadata)
 
+    print('metadata: ', metadata)
+    is_allowed = check_section_permission(metadata.get("section", []), user.role)
+    if not is_allowed:
+        answer = f"Sorry, you do not have permission to access the section: {', '.join(metadata['section'])}."
+        return {"answer": answer, "query_filter": extracted_filter}
     query_filter = build_qdrant_filter(metadata, user_department)
     print('query_filter: ', query_filter)
+    # query_filter_json = generate_in_json(user_department, metadata['patient_id'], metadata['section'])
+    # print("query_filter_json: ", query_filter_json)
+
 
     search_result = search_with_fallback(query, query_filter)
     print('search_result: ', search_result)
@@ -232,8 +245,9 @@ async def handle_query(req: QueryRequest, user: User = Depends(get_current_user)
     context = "\n\n".join([hit.document for hit in search_result])
 
     final_response = get_answer_from_openai(query, context, answer_system_prompt)
-
-    return {"answer": final_response}
+    # Prepare the final response
+    
+    return {"answer": final_response, "query_filter": extracted_filter}
 
 
 # === Helper Functions ===
@@ -261,10 +275,10 @@ def check_section_permission(sections: list, role: str):
     }
     allowed = allowed_sections.get(role, [])
     if sections and not any(s in allowed for s in sections):
-        context = f"Sorry, you do not have permission to access the section(s): {', '.join(sections)}."
-        raise HTTPException(status_code=403, detail=context)
-
-
+        return False
+        # system_prompt = f"Sorry, you do not have permission to access the section(s): {', '.join(sections)}."
+    else:
+        return True
 def build_qdrant_filter(metadata: dict, user_department: str):
     must_conditions = []
 
@@ -345,7 +359,7 @@ def get_answer_from_openai(query: str, context: str, system_prompt: str) -> str:
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Context:\n{context}\n\nPlease answer based on this context."},
+                {"role": "user", "content": f"Context:\n{context}"},
                 {"role": "user", "content": f"Query:\n{query}"}
             ]
         )
@@ -377,7 +391,6 @@ async def handle_query(req: QueryRequest):
             limit=10,
         )
     except Exception as e:
-        breakpoint()
         raise HTTPException(status_code=500, detail=f"Qdrant query error: {e}")
 
     # Combine context
@@ -401,4 +414,45 @@ async def handle_query(req: QueryRequest):
     return {"query": query, "metadata": metadata, "answer": answer}
 
 
+def generate_in_json(department_values, patient_id_values, section_values):
+    """
+    Generates a query filter JSON with $in for patient_id and section fields,
+    but not for department if there's only one value.
 
+    Parameters:
+    - department_values: List of department values (e.g., ["Cardiology"])
+    - patient_id_values: List of patient_id values (e.g., ["Abigail Collins", "Layla Harris"])
+    - section_values: List of section values (e.g., ["Current Condition", "Medical History"])
+
+    Returns:
+    - JSON object with the query filter.
+    """
+    must_conditions = []
+    
+    # Use department value directly (no $in)
+    must_conditions.append({"key": "department", "match": department_values})
+    
+    # Use $in for patient_id and section if there are multiple values
+    if len(patient_id_values) > 1:
+        must_conditions.append({"key": "patient_id", "match": {"$in": patient_id_values}})
+    else:
+        must_conditions.append({"key": "patient_id", "match": patient_id_values[0]})
+    
+    if len(section_values) > 1:
+        must_conditions.append({"key": "section", "match": {"$in": section_values}})
+    else:
+        must_conditions.append({"key": "section", "match": section_values[0]})
+    
+    # Final query filter
+    query_filter = {"must": must_conditions}
+    
+    return json.dumps(query_filter, indent=2)
+
+def format_extracted_filter(filter_dict):
+    parts = []
+    for key, value in filter_dict.items():
+        if isinstance(value, list):
+            parts.append(f"{key}: $in [{', '.join(value)}]")
+        else:
+            parts.append(f"{key}: {value}")
+    return ', '.join(parts)
