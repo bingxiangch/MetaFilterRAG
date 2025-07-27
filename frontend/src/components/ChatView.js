@@ -15,7 +15,7 @@ export const ChatView = () => {
 
       try {
         const response = await api.post(`http://localhost:8000/query`, { prompt: newMessage });
-        addMessage({ text: response.data.answer, query_filter: response.data.query_filter, sender: 'bot' });
+        addMessage({ text: response.data.answer, access_suggestion: response.data.access_suggestion, sender: 'bot' });
       } catch (error) {
         handleApiError(error);
       } finally {
@@ -55,29 +55,36 @@ export const ChatView = () => {
     <main className="bg-slate-50 p-6 sm:p-10 flex-auto">
       <div>
         {error && <div style={{ color: 'red' }}>{error}</div>}
-        <div style={{ height: '600px', overflowY: 'auto', border: '1px solid #ccc', padding: '10px' }}>
+        <div
+          style={{
+            height: '500px', // or however tall you want
+            overflowY: 'auto',
+            border: '1px solid #ccc',
+            padding: '10px',
+            marginBottom: '8px' // <-- add this to reduce spacing before input
+          }}
+        >
   {messages.map((message, index) => (
     <div key={index} style={{ marginBottom: '10px', textAlign: message.sender === 'user' ? 'right' : 'left' }}>
       <strong>{message.sender === 'user' ? 'You' : 'Bot'}:</strong> 
-      <div dangerouslySetInnerHTML={{ __html: message.text.replace(/(?:\r\n|\r)(?![\n*])/g, '<br />').replace(/<ol>/g, '<ol class="list-decimal" style="padding-left: 20px;">') }} />
-      {message.sender === 'bot' && message.query_filter && message.query_filter !== '{}' && (
-  <div>Extracted_filter: {message.query_filter}</div>
+    <div 
+      style={{ fontSize: '18px', lineHeight: '1.6' }} // <- Add this line
+      dangerouslySetInnerHTML={{
+        __html: message.text.replace(/(?:\r\n|\r)(?![\n*])/g, '<br />')
+                            .replace(/<ol>/g, '<ol class="list-decimal" style="padding-left: 20px;">')
+      }} 
+    />
+      {message.sender === 'bot' && message.access_suggestion && message.access_suggestion !== '{}' && (
+  <div>{message.access_suggestion}</div>
 )}
 
     </div>
   ))}
 </div>
 
-        <div className="flex items-center mt-4">
-        {/* <span className="ml-2 text-gray-500">LLM Mode:</span>
-          <select
-            value={selectedMode}
-            onChange={(e) => handleModeChange(e.target.value)}
-            className="border rounded-r py-2 px-4 focus:outline-none"
-          >
-            <option value="local">Mistral-7b</option>
-            <option value="openai">GPT3.5</option>
-          </select> */}
+        <div className="flex items-center mt-2">
+
+
           <input
             type="text"
             value={newMessage}

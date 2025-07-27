@@ -1,257 +1,304 @@
+import os, json
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import Column, Integer, String, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from dotenv import load_dotenv
-from qdrant_client import QdrantClient, models
 from openai import OpenAI
-import os
-import json
-from dataclasses import is_dataclass, asdict
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchText
+from sentence_transformers import SentenceTransformer
 
-# Load environment variables
+# === Load env ===
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 collectionName = os.getenv("collection_name")
-qdrant_url = os.getenv("qdrant_url")
-# OpenAI + Qdrant setup
 openai_client = OpenAI(api_key=os.getenv("api_key"))
-qdrant_client = QdrantClient(
-    url=qdrant_url,
-    api_key=os.getenv("qdrant_api_key")
-)
+qdrant_client = QdrantClient(url=os.getenv("qdrant_url"), api_key=os.getenv("qdrant_api_key"))
+embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-
-# Database setup
+# === DB Setup ===
 SQLALCHEMY_DATABASE_URL = "sqlite:///./sqlite.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 Base = declarative_base()
 SessionLocal = sessionmaker(bind=engine, autoflush=False)
 
-# User model
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     role = Column(String)
-    department = Column(String)
 
 Base.metadata.create_all(bind=engine)
 
-# Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
+def verify_password(plain, hashed): return pwd_context.verify(plain, hashed)
+def get_password_hash(password): return pwd_context.hash(password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-# Token generation
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# OAuth2
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
-# Dependencies
 def get_db():
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        role = payload.get("role")
-        department = payload.get("department")
-        if username is None:
-            raise credentials_exception
+        username = payload.get("sub")
+        if not username:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
     except JWTError:
-        raise credentials_exception
-    user = db.query(User).filter(User.username == username).first()
-    if user is None:
-        raise credentials_exception
-    user.role = role
-    user.department = department
-    return user
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-# FastAPI app
+# === FastAPI App ===
 app = FastAPI()
-
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-system_prompt = """
-Extract the following metadata from the user's query and return it in valid JSON format. 
-
-- `patient_id`: A list of full patient name(s), e.g., ["Barbara Cantu"].
-- `department`: a list of department,  e.g., [Cardiology"].
-- `section`: A list of section,  e.g., ["Basic Information"]:
-  - "Basic Information"
-  - "Current Condition"
-  - "Treatment"
-  - "Medical History"
-  - "Lab Results"
-  - "Billing Information"
-
-Only include fields that are explicitly mentioned or clearly implied in the query. Omit any field that is missing or ambiguous.
-
-Query: "{query}"
-"""
-
-
-# Request schemas
-class QueryRequest(BaseModel):
-    prompt: str
-
+# === Auth Endpoints ===
 class UserCreate(BaseModel):
     username: str
     password: str
     role: str
-    department: str
+@app.delete("/clean_all_users")
+def clean_all_users(db: Session = Depends(get_db)):
+    num_deleted = db.query(User).delete()
+    db.commit()
+    return {"message": f"Deleted {num_deleted} users from the database."}
 
-class UserUpdate(BaseModel):
-    password: str
-    role: str
-    department: str
 
-# User Registration
 @app.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    hashed_pw = get_password_hash(user.password)
     db_user = User(
         username=user.username,
-        hashed_password=hashed_pw,
-        role=user.role,
-        department=user.department
+        hashed_password=get_password_hash(user.password),
+        role=user.role
     )
     db.add(db_user)
     db.commit()
-    return {"message": "User registered successfully"}
+    return {"message": "User registered"}
 
-@app.get("/users")
-def list_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return [
-        {
-            "id": user.id,
-            "username": user.username,
-            "role": user.role,
-            "department": user.department
-        }
-        for user in users
-    ]
-
-@app.put("/update_user/{username}")
-def update_user(username: str, user_update: UserUpdate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == username).first()
-
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user_update.password:
-        db_user.hashed_password = get_password_hash(user_update.password)
-
-    if user_update.role:
-        db_user.role = user_update.role
-
-    if user_update.department:
-        db_user.department = user_update.department
-
-    db.commit()
-    return {"message": "User updated successfully"}
-
-# Login
 @app.post("/login")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={
-            "sub": user.username,
-            "role": user.role,
-            "department": user.department
-        },
-        expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token({"sub": user.username, "role": user.role})
+    return {"access_token": token, "token_type": "bearer"}
+
+# === Query Metadata Extraction ===
+system_prompt = """
+You are part of an information system that processes user queries related to medical and pharmaceutical topics.
+
+Your task is to read the user's query and identify which specific information type(s) it is asking about. Choose only from the following predefined list of medical information types:
+
+- information
+- symptoms
+- treatment
+- inheritance
+- frequency
+- genetic changes
+- causes
+- exams and tests
+- research
+- outlook
+- susceptibility
+- considerations
+- prevention
+- stages
+- complications
+- support groups
+
+Return your answer strictly in the following JSON format:
+
+{ "qtype": ["<type1>", "<type2>", ...] }
+
+Only include types that are clearly relevant based on the query. If the query touches on multiple topics, include all that apply. If none match clearly, return an empty list:
+
+{ "qtype": [] }
+"""
+role_to_qtypes = {
+    "patient": [
+        "symptoms", "information", "prevention", "support groups", "considerations"
+    ],
+    "doctor": [
+        "symptoms", "treatment", "inheritance", "frequency", "genetic changes",
+        "causes", "exams and tests", "susceptibility", "outlook", "complications", "stages"
+    ],
+    "researcher": [
+        "research", "genetic changes", "outlook", "causes"
+    ],
+    "admin": [
+        # Admin can access all qtypes explicitly listed here (union of all above plus any extra)
+        "symptoms", "diagnosis", "treatment", "stages", "exams and tests", "causes",
+        "susceptibility", "outlook", "frequency", "inheritance", "genetic changes",
+        "prevention", "complications", "medication", "dosage", "usage",
+        "storage and disposal", "contraindication", "side effects", "research",
+        "patient education", "general information", "support groups", "considerations"
+    ]
+}
 
 
-# Query Endpoint with Permission Check
+def is_access_allowed(user_role: str, requested_qtypes: list[str], role_to_qtypes: dict[str, list[str]]):
+    """
+    Check if the user role has permission to access all requested qtypes.
+
+    Args:
+        user_role (str): Role of the user, e.g., "doctor"
+        requested_qtypes (list[str]): List of qtypes extracted from query, e.g., ["symptoms", "treatment"]
+        role_to_qtypes (dict[str, list[str]]): Mapping from roles to allowed qtypes
+
+    Returns:
+            allowed: True if all qtypes allowed, False otherwise
+    """
+    allowed_qtypes = role_to_qtypes.get(user_role, [])
+    for qt in requested_qtypes:
+        if qt not in allowed_qtypes:
+            return False
+
+    return True
+
+
+class QueryRequest(BaseModel):
+    prompt: str
+
 @app.post("/query")
-async def handle_query(req: QueryRequest, user: User = Depends(get_current_user)):
+def query(req: QueryRequest, user: User = Depends(get_current_user)):
     query = req.prompt
-    user_department = user.department
+    qtypes = extract_qtypes(query)
+    allowed_qtypes = role_to_qtypes.get(user.role, [])
 
+    # Step 1: Embed query
+    vector = embedding_model.encode(query).tolist()
+
+    # Step 2: Deny if top-1 hit is restricted
+    top1_blocked = is_top1_hit_forbidden(vector, allowed_qtypes, user.role)
+    if top1_blocked:
+        return top1_blocked
+
+    # Step 3: Build Qdrant filter for role
+    query_filter, access_suggestion = build_qtype_filter(user.role, qtypes)
+
+    # Step 4: Get relevant context from Qdrant
+    filtered_result = run_filtered_qdrant_query(vector, query_filter)
+    context, sources_used = build_context(filtered_result)
+
+    # Step 5: Call OpenAI
+    prompt = build_system_prompt()
+    raw_answer = get_answer_from_openai(query, context, prompt)
+    final_answer = format_answer_with_source(raw_answer, sources_used)
+
+    return {
+        "answer": final_answer,
+        "user_role": user.role,
+        "used_qtypes": qtypes,
+        "access_suggestion": access_suggestion
+    }
+def extract_qtypes(query: str):
     metadata = extract_metadata(query)
-    metadata['department'] = user_department
-    # Move "department" to the beginning
-    ordered_metadata = {'department': metadata.pop('department'), **metadata}
-    extracted_filter = format_extracted_filter(ordered_metadata)
-    print("extracted_filter: ", extracted_filter)
-    extracted_filter = format_extracted_filter(ordered_metadata)
+    return metadata.get("qtype", [])
 
-    print('metadata: ', metadata)
-    is_allowed = check_section_permission(metadata.get("section", []), user.role)
-    if not is_allowed:
-        answer = f"Sorry, you do not have permission to access the section: {', '.join(metadata['section'])}."
-        return {"answer": answer, "query_filter": extracted_filter}
-    query_filter = build_qdrant_filter(metadata, user_department)
-    print('query_filter: ', query_filter)
-    # query_filter_json = generate_in_json(user_department, metadata['patient_id'], metadata['section'])
-    # print("query_filter_json: ", query_filter_json)
+def is_top1_hit_forbidden(vector, allowed_qtypes, user_role):
+    try:
+        result = qdrant_client.query_points(
+            collection_name=collectionName,
+            query=vector,
+            limit=1
+        )
+        if result.points:
+            top_hit = result.points[0]
+            qtypes = top_hit.payload.get("qtype", [])
+            qtypes = [qtypes] if isinstance(qtypes, str) else qtypes
+            denied = [qt for qt in qtypes if qt not in allowed_qtypes]
 
+            if denied:
+                return {
+                    "answer": (
+                        "The answer is not available because the top relevant content could not be retrieved.\n"
+                        f"Context is not provided because your role ('{user_role}') is not allowed to access content about: {', '.join(denied)}."
+                    ),
+                    "user_role": user_role,
+                    "used_qtypes": qtypes,
+                }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unfiltered Qdrant query failed: {e}")
+    return None
 
-    search_result = search_with_fallback(query, query_filter)
-    print('search_result: ', search_result)
-    answer_system_prompt = build_answer_prompt(search_result, user)
-    context = "\n\n".join([hit.document for hit in search_result])
+def build_qtype_filter(user_role, qtypes):
+    allowed = role_to_qtypes.get(user_role, [])
+    if not is_access_allowed(user_role, qtypes, role_to_qtypes):
+        denied = [qt for qt in qtypes if qt not in allowed]
+        suggestion = (
+            "Note: Your query includes restricted content and some parts were filtered.\n"
+            f"Denied qtypes: {', '.join(denied)}"
+        )
+        return Filter(should=[FieldCondition(key="qtype", match=MatchText(text=qt)) for qt in allowed]), suggestion
+    else:
+        return Filter(should=[FieldCondition(key="qtype", match=MatchText(text=qt)) for qt in qtypes]), ""
 
-    final_response = get_answer_from_openai(query, context, answer_system_prompt)
-    # Prepare the final response
-    
-    return {"answer": final_response, "query_filter": extracted_filter}
+def run_filtered_qdrant_query(vector, query_filter):
+    try:
+        result = qdrant_client.query_points(
+            collection_name=collectionName,
+            query=vector,
+            query_filter=query_filter,
+            limit=5
+        )
+        return [pt for pt in result.points if pt.score >= 0.85]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Filtered Qdrant query failed: {e}")
+
+def build_context(filtered_result):
+    context_blocks = []
+    sources_used = set()
+    for hit in filtered_result:
+        question = hit.payload.get("question", "").strip()
+        answer = hit.payload.get("answer", "").strip()
+        source = hit.payload.get("source", "Unknown")
+        if answer:
+            context_blocks.append(f"Q: {question}\nA: {answer}")
+            sources_used.add(source)
+    return "\n\n".join(context_blocks), sources_used
+
+def build_system_prompt():
+    return (
+        "You are a medical assistant. Use ONLY the information explicitly provided in the context to answer the question. "
+        "If the answer is not found in the context, respond exactly with: \"The answer is not available in the provided context.\" "
+        "Do not use prior knowledge or make assumptions beyond the text."
+    )
+
+def format_answer_with_source(raw_answer, sources_used):
+    if not is_answer_missing(raw_answer) and sources_used:
+        return f"{raw_answer}\n\n(Answer retrieved from: {', '.join(sorted(sources_used))})"
+    return raw_answer
+
 
 
 # === Helper Functions ===
-
 def extract_metadata(query: str) -> dict:
     try:
         response = openai_client.chat.completions.create(
@@ -265,188 +312,20 @@ def extract_metadata(query: str) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Metadata extraction failed: {e}")
 
-
-def check_section_permission(sections: list, role: str):
-    allowed_sections = {
-        "doctor": ["Basic Information", "Current Condition", "Treatment", "Medical History", "Lab Results"],
-        "financial_staff": ["Basic Information", "Billing Information"],
-        "receptionist": ["Basic Information"],
-        "pharmacist": ["Basic Information", "Treatment"]
-    }
-    allowed = allowed_sections.get(role, [])
-    if sections and not any(s in allowed for s in sections):
-        return False
-        # system_prompt = f"Sorry, you do not have permission to access the section(s): {', '.join(sections)}."
-    else:
-        return True
-def build_qdrant_filter(metadata: dict, user_department: str):
-    must_conditions = []
-
-    if user_department:
-        must_conditions.append(models.FieldCondition(
-            key="department",
-            match=models.MatchValue(value=user_department)
-        ))
-
-    if "patient_id" in metadata:
-        patient_conditions = [
-            models.FieldCondition(
-                key="patient_id",
-                match=models.MatchText(text=pid)
-            ) for pid in metadata["patient_id"]
-        ]
-        if patient_conditions:
-            must_conditions.append(models.Filter(should=patient_conditions))
-
-    if "section" in metadata:
-        must_conditions.extend([
-            models.FieldCondition(
-                key="section",
-                match=models.MatchText(text=section)
-            ) for section in metadata["section"]
-        ])
-
-    return models.Filter(must=must_conditions) if must_conditions else None
-
-
-def search_with_fallback(query: str, query_filter):
+def get_answer_from_openai(query, context, prompt):
     try:
-        result = qdrant_client.query(
-            collection_name=collectionName,
-            query_text=query,
-            limit=10,
-            query_filter=query_filter
-        )
-        if result:
-            return result
+        full_input = f"Context:\n{context}\n\nQuery:\n{query}"
 
-        # Retry without filter
-        fallback_result = qdrant_client.query(
-            collection_name=collectionName,
-            query_text=query,
-            limit=10,
-            query_filter=None
-        )
-        return fallback_result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Qdrant query failed: {e}")
-
-
-def build_answer_prompt(search_result, user: User) -> str:
-    if not search_result:
-        return "You are a helpful medical assistant. No information was found in the context."
-
-    top_result = search_result[0]
-    result_dept = top_result.metadata.get("department")
-    result_patient = top_result.metadata.get("patient_id")
-
-    if result_dept != user.department:
-        return (
-            f"You are a helpful medical assistant. The user tried to access '{result_patient}' in '{result_dept}' "
-            f"but their department is '{user.department}'. Respond with: "
-            f"\"You don't have permission to access {result_patient}'s records in {result_dept} department.\""
-        )
-
-    return (
-        "You are a helpful medical assistant. Answer only using the context. "
-        "If no answer is found, say 'No information found in the context.'"
-    )
-
-
-def get_answer_from_openai(query: str, context: str, system_prompt: str) -> str:
-    try:
         response = openai_client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Context:\n{context}"},
-                {"role": "user", "content": f"Query:\n{query}"}
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": full_input}
             ]
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI response error: {e}")
-
-
-# Protected query endpoint
-@app.post("/test_query")
-async def handle_query(req: QueryRequest):
-    query = req.prompt
-    # Extract metadata from query
-    try:
-        meta_response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": query}
-            ]
-        )
-        metadata = json.loads(meta_response.choices[0].message.content.strip())
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Metadata extraction failed: {e}")
-    try:
-        search_result = qdrant_client.query(
-            collection_name=collectionName,
-            query_text=query,
-            limit=10,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Qdrant query error: {e}")
-
-    # Combine context
-    context = "\n\n".join([hit.document for hit in search_result])
-    print('context: ',context)
-
-    # Ask OpenAI with context
-    try:
-        final_response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful medical assistant. Answer only using the context. If no answer, say 'No information found in the context.'"},
-                {"role": "user", "content": f"Context:\n{context}"},
-                {"role": "user", "content": query}
-            ]
-        )
-        answer = final_response.choices[0].message.content.strip()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI answer error: {e}")
-
-    return {"query": query, "metadata": metadata, "answer": answer}
-
-
-def generate_in_json(department_values, patient_id_values, section_values):
-    """
-    Generates a query filter JSON with $in for patient_id and section fields,
-    but not for department if there's only one value.
-
-    Parameters:
-    - department_values: List of department values (e.g., ["Cardiology"])
-    - patient_id_values: List of patient_id values (e.g., ["Abigail Collins", "Layla Harris"])
-    - section_values: List of section values (e.g., ["Current Condition", "Medical History"])
-
-    Returns:
-    - JSON object with the query filter.
-    """
-    must_conditions = []
-    
-    # Use department value directly (no $in)
-    must_conditions.append({"key": "department", "match": department_values})
-    
-    # Use $in for patient_id and section if there are multiple values
-    if len(patient_id_values) > 1:
-        must_conditions.append({"key": "patient_id", "match": {"$in": patient_id_values}})
-    else:
-        must_conditions.append({"key": "patient_id", "match": patient_id_values[0]})
-    
-    if len(section_values) > 1:
-        must_conditions.append({"key": "section", "match": {"$in": section_values}})
-    else:
-        must_conditions.append({"key": "section", "match": section_values[0]})
-    
-    # Final query filter
-    query_filter = {"must": must_conditions}
-    
-    return json.dumps(query_filter, indent=2)
+        raise HTTPException(status_code=500, detail=f"OpenAI error: {e}")
 
 def format_extracted_filter(filter_dict):
     parts = []
@@ -456,3 +335,6 @@ def format_extracted_filter(filter_dict):
         else:
             parts.append(f"{key}: {value}")
     return ', '.join(parts)
+
+def is_answer_missing(answer: str) -> bool:
+    return "the answer is not available in the provided context." in answer.lower()

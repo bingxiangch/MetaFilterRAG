@@ -24,7 +24,7 @@ function AppHeader() {
 
         {/* Display Current User */}
         <Typography.Text strong className="ml-2">
-          {user.sub} - Role: {user.role} - Department: {user.department}
+          {user.sub} - Role: {user.role}
         </Typography.Text>
 
         {/* User Role */}
